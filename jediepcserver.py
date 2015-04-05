@@ -32,8 +32,8 @@ import itertools
 import logging
 import site
 
-jedi = None  # I will load it later
 
+jedi = None  # I will load it later
 
 PY3 = (sys.version_info[0] >= 3)
 NEED_ENCODE = not PY3
@@ -74,9 +74,9 @@ def candidates_description(comp):
 _WHITESPACES_RE = re.compile(r'\s+')
 
 
-def complete(*args):
+def complete(*args, **kwargs):
     reply = []
-    for comp in jedi_script(*args).complete():
+    for comp in jedi_script(*args, **kwargs).completions():
         reply.append(dict(
             word=comp.word,
             doc=comp.doc,
@@ -86,9 +86,10 @@ def complete(*args):
     return reply
 
 
-def get_in_function_call(*args):
-    call_def = jedi_script(*args).get_in_function_call()
+def get_in_function_call(*args, **kwargs):
+    call_def = jedi_script(*args, **kwargs).call_signatures()
     if call_def:
+        call_def = call_def[0]
         return dict(
             # p.get_code(False) should do the job.  But jedi-vim use replace.
             # So follow what jedi-vim does...
@@ -100,7 +101,7 @@ def get_in_function_call(*args):
         return []  # nil
 
 
-def _goto(method, *args):
+def _goto(method, *args, **kwargs):
     """
     Helper function for `goto` and `related_names`.
 
@@ -111,22 +112,22 @@ def _goto(method, *args):
     # `definitions` is a list. Each element is an instances of
     # `jedi.api_classes.BaseOutput` subclass, i.e.,
     # `jedi.api_classes.RelatedName` or `jedi.api_classes.Definition`.
-    definitions = method(jedi_script(*args))
+    definitions = method(jedi_script(*args, **kwargs))
     return [dict(
         column=d.column,
-        line_nr=d.line_nr,
+        line_nr=d.line,
         module_path=d.module_path if d.module_path != '__builtin__' else [],
         module_name=d.module_name,
         description=d.description,
     ) for d in definitions]
 
 
-def goto(*args):
-    return _goto(jedi.Script.goto, *args)
+def goto(*args, **kwargs):
+    return _goto(jedi.Script.goto_assignments, *args, **kwargs)
 
 
-def related_names(*args):
-    return _goto(jedi.Script.related_names, *args)
+def related_names(*args, **kwargs):
+    return _goto(jedi.Script.usages, *args)
 
 
 def definition_to_dict(d):
@@ -134,7 +135,7 @@ def definition_to_dict(d):
         doc=d.doc,
         description=d.description,
         desc_with_module=d.desc_with_module,
-        line_nr=d.line_nr,
+        line_nr=d.line,
         column=d.column,
         module_path=d.module_path,
         name=getattr(d, 'name', []),
@@ -143,8 +144,8 @@ def definition_to_dict(d):
     )
 
 
-def get_definition(*args):
-    definitions = jedi_script(*args).get_definition()
+def get_definition(*args, **kwargs):
+    definitions = jedi_script(*args, **kwargs).goto_definitions()
     return list(map(definition_to_dict, definitions))
 
 
@@ -167,7 +168,7 @@ def get_names_recursively(definition, parent=None):
         return [d]
 
 
-def defined_names(*args):
+def defined_names(*args, **kwargs):
     return list(map(get_names_recursively, jedi.api.defined_names(*args)))
 
 
