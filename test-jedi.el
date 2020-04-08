@@ -301,6 +301,40 @@ if True:
             (car reply)
           (should (= line_nr def-line)))))))
 
+
+(ert-deftest jedi:import-python-el-settings-enabled-test ()
+  (with-python-temp-buffer
+    ""
+   (setq-local
+    jedi:import-python-el-settings t
+    jedi:server-args '("--log-level=DEBUG")
+    python-shell-virtualenv-root (python-environment-root-path jedi:environment-root)
+    python-shell-extra-pythonpaths '("/tmp/pythonpath1" "/tmp/pythonpath2"))
+   (jedi:start-server)
+   (should (equal (process-command (epc:manager-server-process jedi:epc))
+                  `(,(python-environment-bin "jediepcserver" jedi:environment-root)
+                    "--log-level=DEBUG"
+                    "--virtual-env" "/home/immerrr/src/emacs-jedi/env"
+                    "--sys-path" "/tmp/pythonpath2"
+                    "--sys-path" "/tmp/pythonpath1")))))
+
+
+
+(ert-deftest jedi:import-python-el-settings-disabled-test ()
+  (with-python-temp-buffer
+    ""
+   (setq-local
+    jedi:import-python-el-settings nil
+    jedi:server-args '("--log-level=DEBUG")
+    python-shell-virtualenv-root (python-environment-root-path jedi:environment-root)
+    python-shell-extra-pythonpaths '("/tmp/pythonpath1" "/tmp/pythonpath2"))
+   (jedi:start-server)
+   (should (equal (process-command (epc:manager-server-process jedi:epc))
+                  `(,(python-environment-bin "jediepcserver" jedi:environment-root)
+                    "--log-level=DEBUG")))))
+
+
+
 ;; Local Variables:
 ;; coding: utf-8
 ;; indent-tabs-mode: nil
