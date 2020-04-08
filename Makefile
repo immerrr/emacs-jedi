@@ -89,7 +89,7 @@ print-deps: elpa env
 	@echo "----------------------- Dependencies -----------------------"
 	$(EMACS) --version
 	${VIRTUAL_EMACS} -batch -L . -l jedi.el -f jedi:print-jedi-version
-	-ls -d $(ENV)/*/python*/site-packages/*egg-info
+	-ls -d $(ENV)/*/python*/site-packages/*.*-info
 	@echo "------------------------------------------------------------"
 
 before-test: ${TEST_DEPS}
