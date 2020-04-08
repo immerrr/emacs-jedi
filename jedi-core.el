@@ -413,7 +413,12 @@ avoid collision by something like this::
   :type 'boolean)
 
 (defcustom jedi:import-python-el-settings t
-  "Automatically import settings from python.el variables."
+  "Automatically use settings from python.el variables.
+
+If non-nil, jedi will add values from
+`python-shell-extra-pythonpaths' and
+`python-shell-virtualenv-root' to command line parameters when
+starting the server."
   :group 'jedi
   :type 'boolean)
 
@@ -641,8 +646,14 @@ Tries to find (car command) in \"exec-path\"."
   (if (jedi:epc--live-p jedi:epc)
       (message "Jedi server is already started!")
     (setq jedi:epc (jedi:server-pool--start
-                    (append jedi:server-command jedi:server-args))))
+                    (jedi:-compute-server-command-line))))
   jedi:epc)
+
+(defun jedi:-compute-server-command-line ()
+  (let (extra-args)
+    (when jedi:import-python-el-settings
+      (setq extra-args (jedi:-convert-python-el-settings-to-args)))
+    (append jedi:server-command jedi:server-args extra-args)))
 
 (defun jedi:stop-server ()
   "Stop Jedi server.  Use this command when you want to restart
@@ -1197,7 +1208,7 @@ Paste the result of this function in bug report."
         (with-current-buffer standard-output
           (emacs-lisp-mode)
           (erase-buffer)
-          (pp `(:emacs-version ,emacs-version :jedi-version ,jedi:version))
+          (pp `(:emacs-version ,emacs-version :emacs-jedi-version ,jedi:version))
           (pp reply)
           (display-buffer standard-output))))))
 
@@ -1209,12 +1220,8 @@ Paste the result of this function in bug report."
 
 
 ;;; Setup
-
-(defun jedi:import-python-el-settings-setup ()
-  "Make jedi aware of python.el virtualenv and path settings.
-This is automatically added to the `jedi-mode-hook' when
-`jedi:import-python-el-settings' is non-nil."
-  (let ((args))
+(defun jedi:-convert-python-el-settings-to-args ()
+  (let (args)
     (when (bound-and-true-p python-shell-extra-pythonpaths)
       (mapc
        (lambda (path)
@@ -1225,6 +1232,16 @@ This is automatically added to the `jedi-mode-hook' when
             (append
              (list "--virtual-env" python-shell-virtualenv-path)
              args)))
+    args))
+
+(defun jedi:import-python-el-settings-setup ()
+  "Make jedi aware of python.el virtualenv and path settings.
+
+This function is DEPRECATED.  Instead, when
+`jedi:import-python-el-settings' is non-nil jedi will
+automatically add `python-mode' settings to command line parameters
+when starting the server."
+  (let ((args (jedi:-convert-python-el-settings-to-args)))
     (when args
       (set (make-local-variable 'jedi:server-args)
            (append args jedi:server-args)))))
