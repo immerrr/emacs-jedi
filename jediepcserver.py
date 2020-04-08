@@ -34,6 +34,7 @@ import os
 import re
 import site
 import sys
+from timeit import default_timer
 from collections import namedtuple
 
 import jedi
@@ -198,6 +199,7 @@ class JediEPCHandler(object):
         if NEED_ENCODE:
             source = source.encode('utf-8')
             source_path = source_path and source_path.encode('utf-8')
+        logger.debug('Creating script with kwargs: %s', self.script_kwargs)
         return jedi.Script(
             source, line, column, source_path or '', **self.script_kwargs
         )
@@ -218,10 +220,15 @@ class JediEPCHandler(object):
                 symbol=candidate_symbol(comp),
             )
 
-        return [
-            _wrap_completion_result(comp)
-            for comp in self.jedi_script(*args).completions()
-        ]
+        script = self.jedi_script(*args)
+        started_at = default_timer()
+        completions = script.completions()
+        completions_fetched_at = default_timer()
+        result = [_wrap_completion_result(comp) for comp in completions]
+        docstrings_fetched_at = default_timer()
+        logger.debug('Fetching %d completions took jedi %s seconds', len(completions), completions_fetched_at - started_at)
+        logger.debug('Fetching docstrings took %s seconds', docstrings_fetched_at - completions_fetched_at)
+        return result
 
     def get_in_function_call(self, *args):
         sig = self.jedi_script(*args).call_signatures()
