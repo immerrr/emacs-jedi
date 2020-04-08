@@ -450,6 +450,12 @@ def jedi_epc_server(
     server.register_function(handler.defined_names)
     server.register_function(handler.get_jedi_version)
 
+    # FIXME: add jedi debug messages to the log
+    # from jedi import debug
+    # debug.debug_function = logger.info
+    # debug.enable_notice = True
+    # debug.enable_warning = True
+
     @server.register_function
     def toggle_log_traceback():
         server.log_traceback = not server.log_traceback
